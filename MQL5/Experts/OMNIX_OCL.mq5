@@ -96,6 +96,7 @@ input double   InpRiskPct             = 0.50;          // Risk per trade (% equi
 input double   InpMaxRiskPct          = 1.00;          // Hard cap risk per trade (% equity), all modes
 input double   InpAdaptiveMaxLots     = 0.50;          // Adaptive mode lot ceiling
 input double   InpCommissionRTPerLot  = 6.00;          // Round-turn commission per lot (until learned from deals)
+input double   InpSimCommissionRTPerLot = 0.0;         // If the broker charges 0 (tester/some demos): book this RT commission per lot in logs, risk and OnTester
 
 input group "=== Risk limits ==="
 input double   InpMaxDailyLossPct     = 3.0;           // Max daily loss (% of day-start balance)
@@ -162,6 +163,8 @@ long              g_last_tick_msc=0;
 ulong             g_last_process_ms=0;
 datetime          g_last_status=0;
 bool              g_tester=false;
+double            g_sim_commission_total=0;   // simulated commission booked (negative)
+double            g_closed_lots=0;
 
 // open-position bookkeeping for slippage and duration (small fixed table)
 #define OCL_TRACK 16
@@ -478,6 +481,9 @@ void OnDeal(const ulong deal)
       swap+=HistoryDealGetDouble(dt,DEAL_SWAP);
      }
    if(!ours) return;
+   bool simulated=false;
+   if(PositionSelectByTicket(pos_id)==false && commission==0.0 && InpSimCommissionRTPerLot>0)
+     { commission=-InpSimCommissionRTPerLot*in_vol; simulated=true; g_sim_commission_total+=commission; }
    string rs=EnumToString(reason); StringReplace(rs,"DEAL_REASON_","");
    g_log.Event("EXIT_DEAL",rs,order,pos_id,vol,0,price,HistoryDealGetDouble(deal,DEAL_SL));
    if(PositionSelectByTicket(pos_id)) return;      // partial close: position still open
@@ -487,7 +493,8 @@ void OnDeal(const ulong deal)
                InpStrategyTag+"/"+ExitProfileName());
    double net=gross+commission+swap;
    g_risk.RecordClose(net,commission);
-   g_bp.ObserveCommission(commission,in_vol);
+   if(!simulated) g_bp.ObserveCommission(commission,in_vol);
+   g_closed_lots+=in_vol;
    g_last_close=TimeCurrent();
    g_log.Event("POSITION_CLOSED",StringFormat("net %.2f gross %.2f comm %.2f reason %s",net,gross,commission,rs),0,pos_id,in_vol,entry_px,price);
    if(k>=0) g_trk_pos[k]=0;
@@ -529,10 +536,13 @@ void Housekeeping()
 string StringUpper_(string s) { StringToUpper(s); return s; }
 
 //==================== tester custom criterion ====================
-// Net profit after commission divided by (1 + max equity drawdown); penalises few trades.
+// Net profit after commission (real, plus any simulated commission) divided by (1 + max equity drawdown);
+// penalises fewer than 30 trades. The totals are also printed to the tester log (OCL_TESTER line).
 double OnTester()
   {
-   double net=TesterStatistics(STAT_PROFIT);
+   double net=TesterStatistics(STAT_PROFIT)+g_sim_commission_total;
+   PrintFormat("OCL_TESTER net_after_sim=%.2f sim_commission=%.2f closed_lots=%.2f trades=%.0f",
+               net,g_sim_commission_total,g_closed_lots,TesterStatistics(STAT_TRADES));
    double dd=TesterStatistics(STAT_EQUITY_DD);
    double trades=TesterStatistics(STAT_TRADES);
    if(trades<30) return -1000+trades;

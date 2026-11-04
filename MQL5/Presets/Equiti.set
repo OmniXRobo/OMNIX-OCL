@@ -29,6 +29,8 @@ InpFixedLots=0.11
 InpMaxRiskPct=1.0
 ; VERIFY: observed schedule shows $3/lot on closing deals -> round turn may be 3.00. EA learns the real value after 5 closed trades.
 InpCommissionRTPerLot=3.00
+; Equiti demo 1173421 charged 0 commission on 2026-11-04; book $3/lot so demo and tester results include realistic cost.
+InpSimCommissionRTPerLot=3.00
 InpMaxDailyLossPct=3.0
 InpMaxDailyDDPct=4.0
 InpMaxWeeklyDDPct=8.0
