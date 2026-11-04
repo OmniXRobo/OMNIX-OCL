@@ -1,0 +1,49 @@
+; OMNIX OCL preset - Equiti (DEMO). Values marked VERIFY must be checked against your account.
+; Enum values are integers (see documentation/M2_Strategy_Specification.md, section 7).
+InpMagic=20261104
+InpSymbolOverride=
+InpStrategyTag=equiti-baseline
+InpDistMode=0
+InpOffsetFixed=0.95
+InpOffsetMin=0.30
+InpOffsetMax=3.0
+InpSLFixed=1.00
+InpArmSides=0
+InpPendingMode=1
+InpFollowDir=0
+InpFollowStep=0.10
+InpFollowMinMs=1000
+InpFollowMaxPerMin=30
+InpPendingLifetimeS=300
+InpOcoMode=0
+InpStopBuffer=0.02
+InpRearmMode=1
+InpRearmCooldownS=0
+InpRearmSpreadK=1.5
+InpExitProfile=2
+InpTrailActivation=0.30
+InpTrailDistance=0.15
+InpTrailStep=0.05
+InpLotMode=0
+InpFixedLots=0.11
+InpMaxRiskPct=1.0
+; VERIFY: observed schedule shows $3/lot on closing deals -> round turn may be 3.00. EA learns the real value after 5 closed trades.
+InpCommissionRTPerLot=3.00
+InpMaxDailyLossPct=3.0
+InpMaxDailyDDPct=4.0
+InpMaxWeeklyDDPct=8.0
+InpMaxSpread=0.40
+InpMaxSpreadVsAvg=2.5
+InpMaxSlippage=0.30
+InpMaxPositions=1
+InpMaxPending=2
+InpMaxTradesPerHour=60
+InpMaxConsecLosses=4
+InpConsecLossPauseMin=30
+InpSessionDubai=00:00-00:00
+InpFridayCutoffDubai=23:30
+; VERIFY: Equiti MT5 server offset (Tester only). Compare Market Watch server time with UTC.
+InpServerUTCOffsetH=2
+InpServerDST=1
+InpNewsAction=0
+InpLogCommon=true

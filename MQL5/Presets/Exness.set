@@ -1,0 +1,50 @@
+; OMNIX OCL preset - Exness (DEMO). Values marked VERIFY must be checked against your account.
+; Enum values are integers (see documentation/M2_Strategy_Specification.md, section 7).
+InpMagic=20261104
+InpSymbolOverride=
+; Exness Standard accounts usually name gold XAUUSDm; auto-discovery handles it.
+InpStrategyTag=exness-baseline
+InpDistMode=0
+InpOffsetFixed=0.95
+InpOffsetMin=0.30
+InpOffsetMax=3.0
+InpSLFixed=1.00
+InpArmSides=0
+InpPendingMode=1
+InpFollowDir=0
+InpFollowStep=0.10
+InpFollowMinMs=1000
+InpFollowMaxPerMin=30
+InpPendingLifetimeS=300
+InpOcoMode=0
+InpStopBuffer=0.02
+InpRearmMode=1
+InpRearmCooldownS=0
+InpRearmSpreadK=1.5
+InpExitProfile=2
+InpTrailActivation=0.30
+InpTrailDistance=0.15
+InpTrailStep=0.05
+InpLotMode=0
+InpFixedLots=0.11
+InpMaxRiskPct=1.0
+; VERIFY: Exness commission depends on account type (Standard: none, wider spread; Raw/Zero: commission). Set yours.
+InpCommissionRTPerLot=7.00
+InpMaxDailyLossPct=3.0
+InpMaxDailyDDPct=4.0
+InpMaxWeeklyDDPct=8.0
+InpMaxSpread=0.40
+InpMaxSpreadVsAvg=2.5
+InpMaxSlippage=0.30
+InpMaxPositions=1
+InpMaxPending=2
+InpMaxTradesPerHour=60
+InpMaxConsecLosses=4
+InpConsecLossPauseMin=30
+InpSessionDubai=00:00-00:00
+InpFridayCutoffDubai=23:30
+; VERIFY: Exness server time is commonly UTC+0 with no DST. Confirm on your terminal.
+InpServerUTCOffsetH=0
+InpServerDST=0
+InpNewsAction=0
+InpLogCommon=true

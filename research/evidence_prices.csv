@@ -1,0 +1,5 @@
+direction,entry,exit,volume,stated_gross_usd,source
+Sell,4044.15,4045.15,0.11,-11.00,prompt section 6
+Buy,4044.37,4044.65,0.11,3.08,prompt section 6
+Sell,4043.62,4043.23,0.11,4.29,prompt section 6
+Buy,4042.94,4043.42,0.11,5.28,prompt section 6

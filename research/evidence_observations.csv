@@ -1,0 +1,13 @@
+direction,open_time,close_time,source
+Sell,11:05:48,11:06:07,prompt timing table (2026-11-04)
+Sell,11:06:19,11:06:39,prompt timing table (2026-11-04)
+Sell,11:07:20,11:07:58,prompt timing table (2026-11-04)
+Buy,11:08:31,11:08:55,prompt timing table (2026-11-04)
+Buy,11:10:24,11:10:48,prompt timing table (2026-11-04)
+Sell,11:11:04,11:12:45,prompt timing table (2026-11-04)
+Buy,11:15:04,11:15:59,prompt timing table (2026-11-04)
+Buy,11:16:15,11:18:16,prompt timing table (2026-11-04)
+Buy,,11:19:47,prompt narrative (open time not supplied)
+Sell,11:19:48,11:19:49,prompt timing table (2026-11-04)
+Buy,11:20:29,11:21:12,prompt timing table (2026-11-04)
+Sell,11:22:46,11:22:58,prompt timing table (2026-11-04)
