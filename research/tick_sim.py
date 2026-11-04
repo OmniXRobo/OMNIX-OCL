@@ -33,7 +33,7 @@ except ImportError:  # pure-python fallback (slow)
 
 @njit(cache=True)
 def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_ms, lifetime_ms,
-             max_spread, comm, cooldown_ms, trend_ms, trend_min, max_hold_ms):
+             max_spread, comm, cooldown_ms, trend_ms, trend_min, max_hold_ms, be_trig, be_off):
     """Return (open_ms, dir, pnl, mfe) arrays for each closed trade. mode 0=breakout stops, 1=fade limits."""
     n = t.shape[0]
     cap = n // 4 + 16
@@ -95,6 +95,11 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
                 placed = False
                 cool_until = ti + cooldown_ms
                 continue
+            if be_trig > 0 and fav >= be_trig:
+                # break-even: lock entry + offset (+ commission) once the move reaches the trigger
+                be = entry + (be_off + comm) * pos
+                if (pos > 0 and be > slp) or (pos < 0 and be < slp):
+                    slp = be
             if dist > 0 and fav >= act:
                 if pos > 0:
                     nsl = px - dist
@@ -180,7 +185,7 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
 
 DEFAULTS = dict(mode=0, off=0.95, sl=1.0, tp=0.0, act=0.30, dist=0.15, follow_step=0.10, follow_min_ms=1000,
                 lifetime_ms=300000, max_spread=0.40, comm=0.03, cooldown_ms=0, trend_ms=0, trend_min=0.0,
-                max_hold_ms=0)
+                max_hold_ms=0, be_trig=0.0, be_off=0.0)
 
 
 def load_ticks(paths):
@@ -222,10 +227,23 @@ def run(t, b, a, **kw):
     i = lambda k: int(p[k])
     return simulate(t, b, a, i("mode"), f("off"), f("sl"), f("tp"), f("act"), f("dist"), f("follow_step"),
                     i("follow_min_ms"), i("lifetime_ms"), f("max_spread"), f("comm"), i("cooldown_ms"),
-                    i("trend_ms"), f("trend_min"), i("max_hold_ms"))
+                    i("trend_ms"), f("trend_min"), i("max_hold_ms"), f("be_trig"), f("be_off"))
 
 
 GRIDS = {
+    # HexaFX-like structure seen in its history: fixed (not followed) +-1.0 bracket living ~20 s, ~21 s pause
+    # after each close, SL 1.00, no TP, early break-even then a loose trail
+    "hexa": dict(
+        mode=[0],
+        off=[0.8, 1.0, 1.2],
+        sl=[1.0],
+        follow=[False, True],
+        lifetime_ms=[10000, 20000, 60000],
+        cooldown_ms=[0, 20000],
+        be=[(0.0, 0.0), (0.15, 0.01), (0.25, 0.01), (0.40, 0.02)],
+        exit=[("trail", 0.30, 0.15), ("trail", 0.5, 0.3), ("trail", 0.8, 0.5)],
+        trend=[(0, 0.0)],
+    ),
     "default": dict(
         mode=[0, 1],
         off=[0.5, 0.95, 1.5, 2.0, 3.0],
@@ -238,9 +256,11 @@ GRIDS = {
 
 
 def expand(grid):
-    for mode, off, sl, ex, tr in itertools.product(grid["mode"], grid["off"], grid["sl"], grid["exit"],
-                                                   grid["trend"]):
-        kw = dict(mode=mode, off=off, sl=sl, trend_ms=tr[0], trend_min=tr[1])
+    for mode, off, sl, ex, tr, fol, life, cool, be in itertools.product(
+            grid["mode"], grid["off"], grid["sl"], grid["exit"], grid["trend"], grid.get("follow", [True]),
+            grid.get("lifetime_ms", [300000]), grid.get("cooldown_ms", [0]), grid.get("be", [(0.0, 0.0)])):
+        kw = dict(mode=mode, off=off, sl=sl, trend_ms=tr[0], trend_min=tr[1],
+                  follow_step=0.10 if fol else 1e9, lifetime_ms=life, cooldown_ms=cool, be_trig=be[0], be_off=be[1])
         if ex[0] == "trail":
             kw.update(tp=0.0, act=ex[1], dist=ex[2])
         else:
@@ -274,7 +294,8 @@ def main():
         ins = stats(op[ot < split_ms])
         oos = stats(op[ot >= split_ms])
         rows.append((kw, ins, oos))
-    keys = ["mode", "off", "sl", "tp", "act", "dist", "trend_ms", "trend_min"]
+    keys = ["mode", "off", "sl", "tp", "act", "dist", "trend_ms", "trend_min", "follow_step", "lifetime_ms",
+            "cooldown_ms", "be_trig", "be_off"]
     with open(a.out, "w") as f:
         f.write(",".join(keys + [f"is_{s}" for s in ("trades", "net", "pf", "win", "avg", "dd")]
                          + [f"oos_{s}" for s in ("trades", "net", "pf", "win", "avg", "dd")]) + "\n")
