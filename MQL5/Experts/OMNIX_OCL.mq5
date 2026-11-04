@@ -7,7 +7,7 @@
 //| re-arm, exit and sizing variants. DEMO / STRATEGY TESTER ONLY.     |
 //+------------------------------------------------------------------+
 #property copyright   "OMNIX Global AI"
-#property version     "0.30"
+#property version     "0.300"
 #property description "OMNIX OCL - Order Control & Liquidity. Demo and Strategy Tester only."
 
 #include <OMNIX_OCL/Common.mqh>
