@@ -96,7 +96,7 @@ There is no fixed 1-second rule. The observed 1–139 s gaps are an output to co
 
 | Mode | `InpLotMode` | Size |
 |---|---|---|
-| Fixed | 0 | `InpFixedLots` (default 0.11) |
+| Fixed | 0 | `InpFixedLots` (default 0.01) |
 | Risk | 1 | equity × `InpRiskPct` / (SL distance × money-per-$-per-lot + round-turn commission) |
 | Adaptive | 2 | risk size × factors that are all ≤ 1: active regime 0.75, extreme/unknown 0.5, daily DD over half its limit 0.5, 2+ consecutive losses 0.5; capped at `InpAdaptiveMaxLots` |
 
@@ -114,7 +114,7 @@ In every mode the size is capped so that one SL hit plus commission cannot excee
 | Max average entry slippage | `InpMaxSlippage` | 0.30 → stop arming |
 | Concurrent positions / pending orders | `InpMaxPositions`, `InpMaxPending` | 1 / 2 |
 | Entries per hour | `InpMaxTradesPerHour` | 60 |
-| Consecutive losses → pause | `InpMaxConsecLosses`, `InpConsecLossPauseMin` | 4 → 30 min |
+| Consecutive losses → pause | `InpMaxConsecLosses`, `InpConsecLossPauseMin` | off (0) by owner choice, 2026-11-04; set e.g. 4 → 30 min to enable |
 | Order rejection rate (last 20) | `InpMaxRejectRate` | 50 % |
 | Total open lots on the account (all symbols) | `InpMaxAccountLots` | 1.0 |
 | Free margin after order / margin level | `InpMinFreeMargin`, `InpMinMarginLevel` | 100 / 300 % |
@@ -129,7 +129,7 @@ Forbidden by design: martingale, grid, averaging down, size increases after loss
 - Session windows are in Dubai time (UTC+4, no DST): `InpSessionDubai` (default 24 h) and an optional second window. Preset `Equiti_Dubai_1800-1900.set` covers 18:00–19:00 Dubai.
 - The broker's own trading sessions (`SymbolInfoSessionTrade`) are always respected, plus a delay after each session opens, a guard around the server midnight rollover, and a Friday cutoff.
 - UTC on demo comes from the terminal clock. In the Strategy Tester (where it is not available) it is server time minus `InpServerUTCOffsetH` with the selected DST rule (US or EU), verified by unit tests for 2026 transitions.
-- News: high-impact USD events from `Common\Files\OMNIX_OCL\news_calendar.csv` (tester and demo) and the MT5 economic calendar (demo only). Blackout `InpNewsBeforeMin`/`InpNewsAfterMin`, with longer FOMC windows taken from the event's actual scheduled time. Actions: block new orders, reduced risk, or monitor only. The EA does not treat news as a directional signal.
+- News: high-impact USD events from `Common\Files\OMNIX_OCL\news_calendar.csv` (tester and demo) and the MT5 economic calendar (demo only). Blackout `InpNewsBeforeMin`/`InpNewsAfterMin`, with longer FOMC windows taken from the event's actual scheduled time. Actions: block new orders, reduced risk, or monitor only (default since 2026-11-04, owner choice: log the event and keep trading). The EA does not treat news as a directional signal.
 
 ## 9. Logging
 

@@ -1,5 +1,8 @@
 # Changelog
 
+## Unreleased
+- Defaults changed at the owner's request: 0.01 lots, consecutive-loss pause off, news action monitor-only (all presets too).
+
 ## 0.3.0 - 2026-11-04
 - Milestone 1 evidence analysis and reconstruction report; history export script and lifecycle reconstruction tool.
 - Milestone 2 strategy specification.

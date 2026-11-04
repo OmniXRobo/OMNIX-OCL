@@ -91,7 +91,7 @@ input int      InpSLMinModifyMs       = 500;           // Min ms between SL modi
 
 input group "=== Position sizing ==="
 input ENUM_OCL_LOT_MODE     InpLotMode       = LOT_FIXED;    // Fixed / risk-based / adaptive
-input double   InpFixedLots           = 0.11;          // Fixed lots
+input double   InpFixedLots           = 0.01;          // Fixed lots
 input double   InpRiskPct             = 0.50;          // Risk per trade (% equity) for risk/adaptive
 input double   InpMaxRiskPct          = 1.00;          // Hard cap risk per trade (% equity), all modes
 input double   InpAdaptiveMaxLots     = 0.50;          // Adaptive mode lot ceiling
@@ -109,7 +109,7 @@ input int      InpDeviationPoints     = 30;            // Max deviation for mark
 input int      InpMaxPositions        = 1;             // Max concurrent positions
 input int      InpMaxPending          = 2;             // Max pending orders
 input int      InpMaxTradesPerHour    = 60;            // Max entries per hour
-input int      InpMaxConsecLosses     = 4;             // Consecutive losses before pause
+input int      InpMaxConsecLosses     = 0;             // Consecutive losses before pause (0 = off)
 input int      InpConsecLossPauseMin  = 30;            // Pause length (min)
 input double   InpMaxRejectRate       = 0.5;           // Max order rejection rate (last 20)
 input double   InpMaxAccountLots      = 1.0;           // Max total open lots on the account
@@ -130,7 +130,7 @@ input ENUM_OCL_DST_RULE     InpServerDST     = DST_US;       // Tester only: ser
 input group "=== News ==="
 input string   InpNewsFile            = "news_calendar.csv"; // Common\Files\OMNIX_OCL\ CSV (UTC)
 input bool     InpUseMT5Calendar      = true;          // Live/demo: also use the MT5 economic calendar
-input ENUM_OCL_NEWS_ACTION  InpNewsAction    = NEWS_BLOCK_NEW; // Action inside a blackout
+input ENUM_OCL_NEWS_ACTION  InpNewsAction    = NEWS_MONITOR_ONLY; // Action inside a blackout (monitor = log only, keep trading)
 input double   InpNewsLotFactor       = 0.5;           // Reduced-risk factor
 input int      InpNewsBeforeMin       = 15;            // Blackout before event (min)
 input int      InpNewsAfterMin        = 15;            // Blackout after event (min)
