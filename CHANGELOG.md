@@ -2,6 +2,7 @@
 
 ## Unreleased
 - Defaults changed at the owner's request: 0.01 lots, consecutive-loss pause off, news action monitor-only (all presets too).
+- Default changed at the owner's request: max-trades-per-hour limit off (InpMaxTradesPerHour=0) in the EA and all presets. Daily loss and drawdown limits unchanged.
 - Fix: a cached pending ticket that filled since the last scan is no longer cancelled (removes the remaining rc=10013 "same-side remainder" EXEC_FAIL).
 - Fix: also skip a pending ticket that already opened a position (position id == order ticket), which MT5 still lists as PLACED for ~40 ms.
 

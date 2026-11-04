@@ -108,7 +108,7 @@ input double   InpMaxSlippage         = 0.30;          // Max average entry slip
 input int      InpDeviationPoints     = 30;            // Max deviation for market closes (points)
 input int      InpMaxPositions        = 1;             // Max concurrent positions
 input int      InpMaxPending          = 2;             // Max pending orders
-input int      InpMaxTradesPerHour    = 60;            // Max entries per hour
+input int      InpMaxTradesPerHour    = 0;             // Max entries per hour (0 = off)
 input int      InpMaxConsecLosses     = 0;             // Consecutive losses before pause (0 = off)
 input int      InpConsecLossPauseMin  = 30;            // Pause length (min)
 input double   InpMaxRejectRate       = 0.5;           // Max order rejection rate (last 20)
