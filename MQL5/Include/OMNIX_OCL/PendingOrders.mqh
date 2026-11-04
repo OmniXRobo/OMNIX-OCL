@@ -73,6 +73,10 @@ public:
         {
          ulong t=OrderGetTicket(i); if(t==0) continue;
          if(OrderGetInteger(ORDER_MAGIC)!=m_magic || OrderGetString(ORDER_SYMBOL)!=bp.symbol) continue;
+         // an order that has just filled can still be listed for a moment (state STARTED/FILLED);
+         // only working orders count, otherwise the OCO step tries to cancel the order that opened the position
+         ENUM_ORDER_STATE st=(ENUM_ORDER_STATE)OrderGetInteger(ORDER_STATE);
+         if(st!=ORDER_STATE_PLACED && st!=ORDER_STATE_PARTIAL) continue;
          ENUM_ORDER_TYPE ty=(ENUM_ORDER_TYPE)OrderGetInteger(ORDER_TYPE);
          if(ty==ORDER_TYPE_BUY_STOP && buy_ticket==0)
            { buy_ticket=t; buy_price=OrderGetDouble(ORDER_PRICE_OPEN); buy_sl=OrderGetDouble(ORDER_SL);
