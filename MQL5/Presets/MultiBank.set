@@ -25,7 +25,7 @@ InpTrailActivation=0.30
 InpTrailDistance=0.15
 InpTrailStep=0.05
 InpLotMode=0
-InpFixedLots=0.11
+InpFixedLots=0.01
 InpMaxRiskPct=1.0
 ; VERIFY: MultiBank commission depends on account type (Standard / Pro / ECN). Set yours.
 InpCommissionRTPerLot=6.00
@@ -38,12 +38,12 @@ InpMaxSlippage=0.30
 InpMaxPositions=1
 InpMaxPending=2
 InpMaxTradesPerHour=60
-InpMaxConsecLosses=4
+InpMaxConsecLosses=0
 InpConsecLossPauseMin=30
 InpSessionDubai=00:00-00:00
 InpFridayCutoffDubai=23:30
 ; VERIFY: MultiBank MT5 server offset (Tester only).
 InpServerUTCOffsetH=2
 InpServerDST=1
-InpNewsAction=0
+InpNewsAction=2
 InpLogCommon=true
