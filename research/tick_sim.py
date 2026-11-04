@@ -4,6 +4,9 @@ It replays real Bid/Ask ticks exported by MQL5/Scripts/OMNIX_OCL_ExportTicks.mq5
 position at a time with a two-sided pending bracket, so entry and exit ideas can be screened quickly
 before they are confirmed in the MT5 Strategy Tester (which remains the reference).
 
+With --exact-fill 1, entry stops and SL exits fill at the order price (what the HexaFX accounts and the
+Equiti demo actually showed: 0.00 slippage). run() also returns exit times (5th array) for hold-time stats.
+
 Modelled:  stop (breakout) or limit (fade) brackets at +-offset, tighten-only follow with a step and a
 minimum interval, pending lifetime, OCO cancel-on-fill, fixed SL, optional TP, optional trailing stop
 (activation / distance / 0.05 step), optional max hold, spread cap, re-arm cooldown, optional trend
@@ -33,7 +36,7 @@ except ImportError:  # pure-python fallback (slow)
 
 @njit(cache=True)
 def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_ms, lifetime_ms,
-             max_spread, comm, cooldown_ms, trend_ms, trend_min, max_hold_ms, be_trig, be_off):
+             max_spread, comm, cooldown_ms, trend_ms, trend_min, max_hold_ms, be_trig, be_off, exact_fill):
     """Return (open_ms, dir, pnl, mfe) arrays for each closed trade. mode 0=breakout stops, 1=fade limits."""
     n = t.shape[0]
     cap = n // 4 + 16
@@ -41,6 +44,7 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
     o_d = np.empty(cap, np.int8)
     o_p = np.empty(cap, np.float64)
     o_m = np.empty(cap, np.float64)
+    o_x = np.empty(cap, np.int64)
     k = 0
     pos = 0
     entry = 0.0
@@ -77,7 +81,7 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
             exit_px = 0.0
             done = False
             if (pos > 0 and px <= slp) or (pos < 0 and px >= slp):
-                exit_px = px
+                exit_px = slp if exact_fill else px
                 done = True
             elif tp > 0 and ((pos > 0 and px >= tpp) or (pos < 0 and px <= tpp)):
                 exit_px = tpp
@@ -90,6 +94,7 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
                 o_d[k] = pos
                 o_p[k] = (exit_px - entry) * pos - comm
                 o_m[k] = mfe
+                o_x[k] = ti
                 k += 1
                 pos = 0
                 placed = False
@@ -123,10 +128,10 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
             if mode == 0:
                 if up_on and a >= up_px:
                     filled = 1
-                    fpx = a
+                    fpx = up_px if exact_fill else a
                 elif dn_on and b <= dn_px:
                     filled = -1
-                    fpx = b
+                    fpx = dn_px if exact_fill else b
             else:
                 if up_on and b >= up_px:
                     filled = -1
@@ -180,12 +185,12 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
                 placed_t = ti
                 up_mod = ti
                 dn_mod = ti
-    return o_t[:k], o_d[:k], o_p[:k], o_m[:k]
+    return o_t[:k], o_d[:k], o_p[:k], o_m[:k], o_x[:k]
 
 
 DEFAULTS = dict(mode=0, off=0.95, sl=1.0, tp=0.0, act=0.30, dist=0.15, follow_step=0.10, follow_min_ms=1000,
                 lifetime_ms=300000, max_spread=0.40, comm=0.03, cooldown_ms=0, trend_ms=0, trend_min=0.0,
-                max_hold_ms=0, be_trig=0.0, be_off=0.0)
+                max_hold_ms=0, be_trig=0.0, be_off=0.0, exact_fill=0)
 
 
 def load_ticks(paths):
@@ -227,7 +232,7 @@ def run(t, b, a, **kw):
     i = lambda k: int(p[k])
     return simulate(t, b, a, i("mode"), f("off"), f("sl"), f("tp"), f("act"), f("dist"), f("follow_step"),
                     i("follow_min_ms"), i("lifetime_ms"), f("max_spread"), f("comm"), i("cooldown_ms"),
-                    i("trend_ms"), f("trend_min"), i("max_hold_ms"), f("be_trig"), f("be_off"))
+                    i("trend_ms"), f("trend_min"), i("max_hold_ms"), f("be_trig"), f("be_off"), i("exact_fill"))
 
 
 GRIDS = {
@@ -276,6 +281,9 @@ def main():
     ap.add_argument("--split", default="2026-10-01", help="UTC date: before = in-sample, from = out-of-sample")
     ap.add_argument("--out", type=Path, default=Path("research/tick_sim_results.csv"))
     ap.add_argument("--comm", type=float, default=0.03, help="round-turn commission in price units per trade")
+    ap.add_argument("--exact-fill", dest="exact_fill", type=int, default=0,
+                    help="1: entry stops and SL exits fill exactly at the order price (0.00 slippage, as seen on the "
+                         "HexaFX accounts and the Equiti demo); 0: at the first crossing tick")
     ap.add_argument("--spread", type=float, default=0.0,
                     help=">0: replace the feed's spread with this fixed value (ask = bid + spread), e.g. 0.09 to model "
                          "a raw/premium account; 0 = keep the feed's own Bid/Ask")
@@ -290,7 +298,8 @@ def main():
     rows = []
     for kw in expand(GRIDS[a.grid]):
         kw["comm"] = a.comm
-        ot, od, op, om = run(t, b, ak, **kw)
+        kw["exact_fill"] = a.exact_fill
+        ot, od, op, om, ox = run(t, b, ak, **kw)
         ins = stats(op[ot < split_ms])
         oos = stats(op[ot >= split_ms])
         rows.append((kw, ins, oos))
