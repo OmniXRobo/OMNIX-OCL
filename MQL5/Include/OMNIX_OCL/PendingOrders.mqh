@@ -95,6 +95,8 @@ public:
         {
          ulong t=OrderGetTicket(i); if(t==0) continue;
          if(OrderGetInteger(ORDER_MAGIC)!=m_magic || OrderGetString(ORDER_SYMBOL)!=bp.symbol) continue;
+         ENUM_ORDER_STATE st=(ENUM_ORDER_STATE)OrderGetInteger(ORDER_STATE);
+         if(st!=ORDER_STATE_PLACED && st!=ORDER_STATE_PARTIAL) continue;
          ex.Cancel(t,reason);
         }
       Scan();
@@ -114,6 +116,8 @@ public:
         {
          ulong t=OrderGetTicket(i); if(t==0) continue;
          if(OrderGetInteger(ORDER_MAGIC)!=m_magic || OrderGetString(ORDER_SYMBOL)!=bp.symbol) continue;
+         ENUM_ORDER_STATE st=(ENUM_ORDER_STATE)OrderGetInteger(ORDER_STATE);
+         if(st!=ORDER_STATE_PLACED && st!=ORDER_STATE_PARTIAL) continue;   // filling or already gone
          if(t!=buy_ticket && t!=sell_ticket) ex.Cancel(t,"duplicate/unknown order");
         }
      }
