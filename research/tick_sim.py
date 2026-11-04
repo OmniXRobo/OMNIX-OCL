@@ -256,8 +256,15 @@ def main():
     ap.add_argument("--split", default="2026-10-01", help="UTC date: before = in-sample, from = out-of-sample")
     ap.add_argument("--out", type=Path, default=Path("research/tick_sim_results.csv"))
     ap.add_argument("--comm", type=float, default=0.03, help="round-turn commission in price units per trade")
+    ap.add_argument("--spread", type=float, default=0.0,
+                    help=">0: replace the feed's spread with this fixed value (ask = bid + spread), e.g. 0.09 to model "
+                         "a raw/premium account; 0 = keep the feed's own Bid/Ask")
     a = ap.parse_args()
     t, b, ak = load_ticks(list(a.ticks.glob(a.glob)))
+    if a.spread > 0:
+        mid = (b + ak) / 2
+        b, ak = mid - a.spread / 2, mid + a.spread / 2
+    print(f"median spread {float(np.median(ak - b)):.3f}, commission {a.comm:.3f} per trade", file=sys.stderr)
     split_ms = int(np.datetime64(a.split, "ms").astype(np.int64))
     print(f"{len(t)} ticks {np.datetime64(int(t[0]), 'ms')} .. {np.datetime64(int(t[-1]), 'ms')}", file=sys.stderr)
     rows = []
