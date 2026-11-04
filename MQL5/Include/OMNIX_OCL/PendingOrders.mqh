@@ -105,7 +105,18 @@ public:
    void              CancelSide(const int side,const string reason)
      {
       ulong t=(side==0)?buy_ticket:sell_ticket;
-      if(t>0 && ex.Cancel(t,reason)){ if(side==0) buy_ticket=0; else sell_ticket=0; }
+      if(t==0) return;
+      // the cached ticket can be stale: the order may have filled (or been removed) since the last Scan();
+      // cancelling it then fails with rc=10013, so only cancel an order that is still working
+      if(!IsWorking(t)){ if(side==0) buy_ticket=0; else sell_ticket=0; return; }
+      if(ex.Cancel(t,reason)){ if(side==0) buy_ticket=0; else sell_ticket=0; }
+     }
+
+   bool              IsWorking(const ulong t) const
+     {
+      if(!OrderSelect(t)) return false;
+      ENUM_ORDER_STATE st=(ENUM_ORDER_STATE)OrderGetInteger(ORDER_STATE);
+      return (st==ORDER_STATE_PLACED || st==ORDER_STATE_PARTIAL);
      }
 
    //--- duplicates (e.g. after a restart race): keep one per side
@@ -173,7 +184,7 @@ public:
             else
               {
                // replace: cancel then place a new order on the same side
-               if(ex.Cancel(t,"replace "+why))
+               if(IsWorking(t) && ex.Cancel(t,"replace "+why))
                  {
                   ulong nt=0; SetInFlight(side,true);
                   if(!ex.PlaceStop(side==0?ORDER_TYPE_BUY_STOP:ORDER_TYPE_SELL_STOP,lots,want,wsl,
