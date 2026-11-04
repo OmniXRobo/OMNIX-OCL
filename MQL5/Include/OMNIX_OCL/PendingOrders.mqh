@@ -114,6 +114,13 @@ public:
 
    bool              IsWorking(const ulong t) const
      {
+      // a position already opened by this order: MT5 lists the position ~40 ms before the order leaves
+      // the order list, and during that gap the order still reports PLACED (position id == order ticket)
+      for(int i=PositionsTotal()-1;i>=0;i--)
+        {
+         ulong pt=PositionGetTicket(i); if(pt==0) continue;
+         if(pt==t || (ulong)PositionGetInteger(POSITION_IDENTIFIER)==t) return false;
+        }
       if(!OrderSelect(t)) return false;
       ENUM_ORDER_STATE st=(ENUM_ORDER_STATE)OrderGetInteger(ORDER_STATE);
       return (st==ORDER_STATE_PLACED || st==ORDER_STATE_PARTIAL);

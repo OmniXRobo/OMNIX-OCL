@@ -3,6 +3,7 @@
 ## Unreleased
 - Defaults changed at the owner's request: 0.01 lots, consecutive-loss pause off, news action monitor-only (all presets too).
 - Fix: a cached pending ticket that filled since the last scan is no longer cancelled (removes the remaining rc=10013 "same-side remainder" EXEC_FAIL).
+- Fix: also skip a pending ticket that already opened a position (position id == order ticket), which MT5 still lists as PLACED for ~40 ms.
 
 ## 0.3.0 - 2026-11-04
 - Milestone 1 evidence analysis and reconstruction report; history export script and lifecycle reconstruction tool.
