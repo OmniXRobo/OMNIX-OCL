@@ -1,0 +1,60 @@
+; OMNIX OCL preset - Equiti (DEMO) - CANDIDATE, NOT VALIDATED ON EQUITI DATA.
+; HexaFX-style structure from the 2026-11-04 research: +-1.20 bracket, 10 s pending life, SL 1.00,
+; early break-even (0.15 -> entry+0.01+costs), trail 0.50/0.30. Best Standard-cost candidate in the Vantage-feed
+; tick simulation (research/tick_sim.py, exact fills): OOS Oct-Nov +0.03/trade, edge decaying. The simulator does
+; not yet reproduce the real Equiti demo, so use only after confirmation on Equiti ticks / MT5 tester.
+InpMagic=20261104
+InpSymbolOverride=
+InpStrategyTag=equiti-hexastyle-cand1
+InpDistMode=0
+InpOffsetFixed=1.20
+InpOffsetMin=0.30
+InpOffsetMax=3.0
+InpSLFixed=1.00
+InpArmSides=0
+InpPendingMode=1
+InpFollowDir=0
+InpFollowStep=0.10
+InpFollowMinMs=1000
+InpFollowMaxPerMin=30
+InpPendingLifetimeS=10
+InpOcoMode=0
+InpStopBuffer=0.02
+InpRearmMode=1
+InpRearmCooldownS=0
+InpRearmSpreadK=1.5
+InpExitProfile=0
+InpTrailActivation=0.50
+InpTrailDistance=0.30
+InpTrailStep=0.05
+InpUseTrailing=true
+InpUseBreakEven=true
+InpBETrigger=0.15
+InpBEOffset=0.01
+InpUseMicroProfit=false
+InpUseTimeExit=false
+InpLotMode=0
+InpFixedLots=0.01
+InpMaxRiskPct=1.0
+; VERIFY: observed schedule shows $3/lot on closing deals -> round turn may be 3.00. EA learns the real value after 5 closed trades.
+InpCommissionRTPerLot=3.00
+; Equiti demo 1173421 charged 0 commission on 2026-11-04; book $3/lot so demo and tester results include realistic cost.
+InpSimCommissionRTPerLot=3.00
+InpMaxDailyLossPct=3.0
+InpMaxDailyDDPct=4.0
+InpMaxWeeklyDDPct=8.0
+InpMaxSpread=0.40
+InpMaxSpreadVsAvg=2.5
+InpMaxSlippage=0.30
+InpMaxPositions=1
+InpMaxPending=2
+InpMaxTradesPerHour=0
+InpMaxConsecLosses=0
+InpConsecLossPauseMin=30
+InpSessionDubai=00:00-00:00
+InpFridayCutoffDubai=23:30
+; VERIFY: Equiti MT5 server offset (Tester only). Compare Market Watch server time with UTC.
+InpServerUTCOffsetH=2
+InpServerDST=1
+InpNewsAction=2
+InpLogCommon=true
