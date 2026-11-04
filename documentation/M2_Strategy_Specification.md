@@ -113,7 +113,7 @@ In every mode the size is capped so that one SL hit plus commission cannot excee
 | Max spread / vs average | `InpMaxSpread`, `InpMaxSpreadVsAvg` | 0.40 / 2.5× |
 | Max average entry slippage | `InpMaxSlippage` | 0.30 → stop arming |
 | Concurrent positions / pending orders | `InpMaxPositions`, `InpMaxPending` | 1 / 2 |
-| Entries per hour | `InpMaxTradesPerHour` | 60 |
+| Entries per hour | `InpMaxTradesPerHour` | 0 (off, owner request) |
 | Consecutive losses → pause | `InpMaxConsecLosses`, `InpConsecLossPauseMin` | off (0) by owner choice, 2026-11-04; set e.g. 4 → 30 min to enable |
 | Order rejection rate (last 20) | `InpMaxRejectRate` | 50 % |
 | Total open lots on the account (all symbols) | `InpMaxAccountLots` | 1.0 |
