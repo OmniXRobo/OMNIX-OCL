@@ -69,7 +69,10 @@ input bool     InpUseRsiFilter        = false;         // Use RSI(M1) band
 input double   InpRsiLow              = 20;            // RSI low
 input double   InpRsiHigh             = 80;            // RSI high
 input bool     InpUseAdxFilter        = false;         // Use ADX(M5) minimum
-input double   InpAdxMin              = 18;            // ADX min
+input double   InpAdxMin              = 18;            // ADX min (Wilder ADX 14 on M5)
+input bool     InpUseSpikeFilter      = false;         // Withdraw the bracket while price is spiking
+input int      InpSpikeWindowMs       = 1000;          // Spike window (ms)
+input double   InpSpikeMax            = 0.80;          // Max |mid change| in the window ($)
 
 input group "=== Exit ==="
 input ENUM_OCL_EXIT_PROFILE InpExitProfile   = EXIT_B_TRAIL; // Exit variant A-F (Custom uses the switches below)
@@ -284,7 +287,8 @@ int OnInit()
    sc.arm_sides=InpArmSides; sc.momentum_window_ms=InpMomentumWindowMs; sc.momentum_min=InpMomentumMin;
    sc.use_atr_filter=InpUseAtrFilter; sc.atr_min=InpAtrMin; sc.atr_max=InpAtrMax;
    sc.block_extreme_regime=InpBlockExtremeRegime; sc.use_rsi_filter=InpUseRsiFilter; sc.rsi_low=InpRsiLow;
-   sc.rsi_high=InpRsiHigh; sc.use_adx_filter=InpUseAdxFilter; sc.adx_min=InpAdxMin; sc.rearm_mode=InpRearmMode;
+   sc.rsi_high=InpRsiHigh; sc.use_adx_filter=InpUseAdxFilter; sc.adx_min=InpAdxMin;
+   sc.use_spike_filter=InpUseSpikeFilter; sc.spike_window_ms=InpSpikeWindowMs; sc.spike_max=InpSpikeMax; sc.rearm_mode=InpRearmMode;
    sc.rearm_cooldown_s=InpRearmCooldownS; sc.rearm_spread_k=InpRearmSpreadK; sc.rearm_range_min=InpRearmRangeMin;
    sc.rearm_range_max=InpRearmRangeMax;
    g_sig.Init(sc,GetPointer(g_md));

@@ -58,7 +58,7 @@ public:
       h_ema_fast_h1 =iMA(sym,PERIOD_H1,20,0,MODE_EMA,PRICE_CLOSE);
       h_ema_slow_h1 =iMA(sym,PERIOD_H1,50,0,MODE_EMA,PRICE_CLOSE);
       h_rsi_m1      =iRSI(sym,PERIOD_M1,14,PRICE_CLOSE);
-      h_adx_m5      =iADX(sym,PERIOD_M5,14);
+      h_adx_m5      =iADXWilder(sym,PERIOD_M5,14);   // Wilder smoothing, same as research/tick_sim.py
       return (h_atr_m1!=INVALID_HANDLE && h_atr_m1_slow!=INVALID_HANDLE);
      }
 
