@@ -335,6 +335,19 @@ GRIDS = {
         adx=[0.0, 20.0, 25.0, 30.0],
         spike=[(0, 0.0), (1000, 0.5), (1000, 0.8), (3000, 1.0)],
     ),
+    # owner's ask: no filters, tune only SL, break-even (covers commission; exits on the bid/ask so the
+    # spread is included), trailing SL and the bracket distance
+    "core": dict(
+        mode=[0],
+        off=[0.5, 0.7, 1.0, 1.5],
+        sl=[0.3, 0.5, 0.7, 1.0],
+        follow=[True, False],
+        lifetime_ms=[20000, 300000],
+        cooldown_ms=[0],
+        be=[(0.15, 0.01), (0.25, 0.01), (0.40, 0.02)],
+        exit=[("trail", 0.30, 0.15), ("trail", 0.5, 0.3), ("trail", 0.8, 0.4), ("trail", 1.2, 0.6)],
+        trend=[(0, 0.0)],
+    ),
     "default": dict(
         mode=[0, 1],
         off=[0.5, 0.95, 1.5, 2.0, 3.0],
