@@ -36,8 +36,12 @@ except ImportError:  # pure-python fallback (slow)
 
 @njit(cache=True)
 def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_ms, lifetime_ms,
-             max_spread, comm, cooldown_ms, trend_ms, trend_min, max_hold_ms, be_trig, be_off, exact_fill):
-    """Return (open_ms, dir, pnl, mfe) arrays for each closed trade. mode 0=breakout stops, 1=fade limits."""
+             max_spread, comm, cooldown_ms, trend_ms, trend_min, max_hold_ms, be_trig, be_off, exact_fill,
+             adx, adx_min, spk, spike_max):
+    """Return (open_ms, dir, pnl, mfe, close_ms) arrays per closed trade. mode 0=breakout stops, 1=fade limits.
+    adx: per-tick ADX of the last closed M5 bar (filter off when adx_min <= 0).
+    spk: per-tick |mid change| over the spike window (filter off when spike_max <= 0).
+    A failing filter cancels the bracket and blocks re-arming, like the EA withdrawing both sides."""
     n = t.shape[0]
     cap = n // 4 + 16
     o_t = np.empty(cap, np.int64)
@@ -122,6 +126,10 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
             chg = (b + a) * 0.5 - (bid[j] + ask[j]) * 0.5
         else:
             chg = 0.0
+        blocked = (adx_min > 0 and adx[i] < adx_min) or (spike_max > 0 and spk[i] > spike_max)
+        if blocked:
+            placed = False
+            continue
         if placed:
             filled = 0
             fpx = 0.0
@@ -190,7 +198,66 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
 
 DEFAULTS = dict(mode=0, off=0.95, sl=1.0, tp=0.0, act=0.30, dist=0.15, follow_step=0.10, follow_min_ms=1000,
                 lifetime_ms=300000, max_spread=0.40, comm=0.03, cooldown_ms=0, trend_ms=0, trend_min=0.0,
-                max_hold_ms=0, be_trig=0.0, be_off=0.0, exact_fill=0)
+                max_hold_ms=0, be_trig=0.0, be_off=0.0, exact_fill=0, adx_min=0.0, spike_ms=0, spike_max=0.0)
+
+
+def adx_per_tick(t, b, a, bar_ms=300000, period=14):
+    """Wilder ADX(period) on mid-price bars of bar_ms, mapped to each tick as the value of the last CLOSED bar
+    (NaN -> 0 until enough bars)."""
+    mid = (b + a) * 0.5
+    bar = t // bar_ms
+    starts = np.flatnonzero(np.r_[True, bar[1:] != bar[:-1]])
+    ends = np.r_[starts[1:], len(t)] - 1
+    hi = np.maximum.reduceat(mid, starts)
+    lo = np.minimum.reduceat(mid, starts)
+    cl = mid[ends]
+    nb = len(starts)
+    out_bar = np.zeros(nb)
+    if nb > 2 * period + 1:
+        up = hi[1:] - hi[:-1]
+        dn = lo[:-1] - lo[1:]
+        pdm = np.where((up > dn) & (up > 0), up, 0.0)
+        mdm = np.where((dn > up) & (dn > 0), dn, 0.0)
+        tr = np.maximum.reduce([hi[1:] - lo[1:], np.abs(hi[1:] - cl[:-1]), np.abs(lo[1:] - cl[:-1])])
+        def wilder(x):
+            r = np.empty_like(x)
+            r[:period] = np.nan
+            r[period - 1] = x[:period].sum()
+            for k in range(period, len(x)):
+                r[k] = r[k - 1] - r[k - 1] / period + x[k]
+            return r
+        atr, sp, sm = wilder(tr), wilder(pdm), wilder(mdm)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            pdi = 100 * sp / atr
+            mdi = 100 * sm / atr
+            dx = 100 * np.abs(pdi - mdi) / (pdi + mdi)
+        dx = np.nan_to_num(dx)
+        adx = np.zeros_like(dx)
+        first = 2 * period - 2
+        adx[first] = dx[period - 1:first + 1].mean()
+        for k in range(first + 1, len(dx)):
+            adx[k] = (adx[k - 1] * (period - 1) + dx[k]) / period
+        out_bar[1:] = adx          # adx for bar index 1..nb-1
+    # tick in bar j sees the value of bar j-1 (last closed)
+    bar_idx = np.searchsorted(starts, np.arange(len(t)), side="right") - 1
+    prev = np.where(bar_idx > 0, out_bar[np.maximum(bar_idx - 1, 0)], 0.0)
+    return prev.astype(np.float64)
+
+
+def spike_per_tick(t, b, a, window_ms):
+    mid = (b + a) * 0.5
+    j = np.searchsorted(t, t - window_ms, side="left")
+    return np.abs(mid - mid[j]).astype(np.float64)
+
+
+_CACHE = {}
+
+
+def _feature(name, t, b, a, arg):
+    key = (name, id(t), len(t), arg)
+    if key not in _CACHE:
+        _CACHE[key] = adx_per_tick(t, b, a) if name == "adx" else spike_per_tick(t, b, a, arg)
+    return _CACHE[key]
 
 
 def load_ticks(paths):
@@ -232,7 +299,11 @@ def run(t, b, a, **kw):
     i = lambda k: int(p[k])
     return simulate(t, b, a, i("mode"), f("off"), f("sl"), f("tp"), f("act"), f("dist"), f("follow_step"),
                     i("follow_min_ms"), i("lifetime_ms"), f("max_spread"), f("comm"), i("cooldown_ms"),
-                    i("trend_ms"), f("trend_min"), i("max_hold_ms"), f("be_trig"), f("be_off"), i("exact_fill"))
+                    i("trend_ms"), f("trend_min"), i("max_hold_ms"), f("be_trig"), f("be_off"), i("exact_fill"),
+                    _feature("adx", t, b, a, 0) if f("adx_min") > 0 else np.zeros(1),
+                    f("adx_min"),
+                    _feature("spike", t, b, a, i("spike_ms")) if f("spike_max") > 0 else np.zeros(1),
+                    f("spike_max"))
 
 
 GRIDS = {
@@ -249,6 +320,21 @@ GRIDS = {
         exit=[("trail", 0.30, 0.15), ("trail", 0.5, 0.3), ("trail", 0.8, 0.5)],
         trend=[(0, 0.0)],
     ),
+    # filters on top of the live bracket: ADX(14, M5) floor like HexaFX's guide, and a spike block
+    # (|mid change| over a short window) against entries filled on reversing spikes
+    "filters": dict(
+        mode=[0],
+        off=[0.95, 1.0],
+        sl=[1.0],
+        follow=[True, False],
+        lifetime_ms=[20000, 300000],
+        cooldown_ms=[0],
+        be=[(0.0, 0.0), (0.25, 0.01)],
+        exit=[("trail", 0.30, 0.15), ("trail", 0.5, 0.3)],
+        trend=[(0, 0.0)],
+        adx=[0.0, 20.0, 25.0, 30.0],
+        spike=[(0, 0.0), (1000, 0.5), (1000, 0.8), (3000, 1.0)],
+    ),
     "default": dict(
         mode=[0, 1],
         off=[0.5, 0.95, 1.5, 2.0, 3.0],
@@ -261,11 +347,13 @@ GRIDS = {
 
 
 def expand(grid):
-    for mode, off, sl, ex, tr, fol, life, cool, be in itertools.product(
+    for mode, off, sl, ex, tr, fol, life, cool, be, adx, spk in itertools.product(
             grid["mode"], grid["off"], grid["sl"], grid["exit"], grid["trend"], grid.get("follow", [True]),
-            grid.get("lifetime_ms", [300000]), grid.get("cooldown_ms", [0]), grid.get("be", [(0.0, 0.0)])):
+            grid.get("lifetime_ms", [300000]), grid.get("cooldown_ms", [0]), grid.get("be", [(0.0, 0.0)]),
+            grid.get("adx", [0.0]), grid.get("spike", [(0, 0.0)])):
         kw = dict(mode=mode, off=off, sl=sl, trend_ms=tr[0], trend_min=tr[1],
-                  follow_step=0.10 if fol else 1e9, lifetime_ms=life, cooldown_ms=cool, be_trig=be[0], be_off=be[1])
+                  follow_step=0.10 if fol else 1e9, lifetime_ms=life, cooldown_ms=cool, be_trig=be[0], be_off=be[1],
+                  adx_min=adx, spike_ms=spk[0], spike_max=spk[1])
         if ex[0] == "trail":
             kw.update(tp=0.0, act=ex[1], dist=ex[2])
         else:
@@ -304,7 +392,7 @@ def main():
         oos = stats(op[ot >= split_ms])
         rows.append((kw, ins, oos))
     keys = ["mode", "off", "sl", "tp", "act", "dist", "trend_ms", "trend_min", "follow_step", "lifetime_ms",
-            "cooldown_ms", "be_trig", "be_off"]
+            "cooldown_ms", "be_trig", "be_off", "adx_min", "spike_ms", "spike_max"]
     with open(a.out, "w") as f:
         f.write(",".join(keys + [f"is_{s}" for s in ("trades", "net", "pf", "win", "avg", "dd")]
                          + [f"oos_{s}" for s in ("trades", "net", "pf", "win", "avg", "dd")]) + "\n")

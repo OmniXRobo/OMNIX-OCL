@@ -46,3 +46,24 @@ def test_exact_fill_uses_order_prices():
     t, b, a = ticks([100, 101.3, 100.0, 99.5])
     _, od, op, _, _ = ts.run(t, b, a, off=0.95, sl=1.0, act=5, dist=0.15, comm=0.0, exact_fill=1)
     assert od[0] == 1 and abs(op[0] + 1.0) < 1e-9
+
+
+def test_spike_filter_blocks_spike_entry():
+    # a 1.0 jump inside one second fills the buy stop without the filter, and is skipped with it
+    t, b, a = ticks([100, 100, 101.2, 100.0, 99.5, 99.5], step_ms=400)
+    _, od, _, _, _ = ts.run(t, b, a, off=0.95, sl=1.0, act=5, dist=0.15, comm=0.0)
+    assert list(od) == [1]
+    _, od2, _, _, _ = ts.run(t, b, a, off=0.95, sl=1.0, act=5, dist=0.15, comm=0.0, spike_ms=1000, spike_max=0.5)
+    assert len(od2) == 0
+
+
+def test_adx_high_in_trend_low_in_range():
+    n_bars, per_bar = 80, 10
+    step = 300000 // per_bar
+    trend = np.repeat(np.arange(n_bars) * 1.0, per_bar) + np.tile(np.linspace(0, 0.5, per_bar), n_bars)
+    chop = 100 + np.tile(np.r_[np.linspace(0, 1, per_bar // 2), np.linspace(1, 0, per_bar // 2)], n_bars)
+    for mids, want_high in ((trend, True), (chop, False)):
+        t, b, a = ticks(mids, step_ms=step)
+        adx = ts.adx_per_tick(t, b, a)
+        assert len(adx) == len(t)
+        assert (adx[-1] > 40) == want_high
