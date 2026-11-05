@@ -21,6 +21,7 @@ private:
    ENUM_ORDER_TYPE_FILLING m_fill_pending;
    ENUM_ORDER_TYPE_FILLING m_fill_market;
    datetime          m_backoff_until;
+   uint              m_last_rc;          // retcode of the last OrderSend (0 = none / skipped)
    long              m_last_send_msc;
    double            m_latency_ema_ms;
 
@@ -63,6 +64,7 @@ private:
          double ms=(GetMicrosecondCount()-t0)/1000.0;
          m_latency_ema_ms=(m_latency_ema_ms<=0)?ms:m_latency_ema_ms+(ms-m_latency_ema_ms)*0.1;
          uint rc=res.retcode;
+         m_last_rc=rc;
          if(rc==TRADE_RETCODE_DONE || rc==TRADE_RETCODE_PLACED || rc==TRADE_RETCODE_DONE_PARTIAL)
            {
             rm.RecordRequest(true);
@@ -93,7 +95,7 @@ private:
      }
 
 public:
-                     CExecutionEngine(void):bp(NULL),lg(NULL),rm(NULL),m_backoff_until(0),m_last_send_msc(0),
+                     CExecutionEngine(void):bp(NULL),lg(NULL),rm(NULL),m_backoff_until(0),m_last_rc(0),m_last_send_msc(0),
                                            m_latency_ema_ms(0) {}
 
    void              Init(CBrokerProfile *profile,CTradeLogger *logger,CRiskManager *risk,const long magic,
@@ -106,6 +108,7 @@ public:
       m_fill_pending=ORDER_FILLING_RETURN;
      }
    double            LatencyMs(void) const { return m_latency_ema_ms; }
+   uint              LastRetcode(void) const { return m_last_rc; }
 
    bool              PlaceStop(const ENUM_ORDER_TYPE type,const double lots,const double price,const double sl,
                                const int expiry_seconds,const string reason,ulong &ticket)
@@ -147,6 +150,7 @@ public:
       MqlTradeRequest r; MqlTradeResult res; ZeroMemory(r);
       r.action=TRADE_ACTION_SLTP; r.position=position_ticket; r.symbol=bp.symbol;
       r.sl=bp.NormalizePrice(sl); r.tp=PositionGetDouble(POSITION_TP); r.magic=m_magic;
+      m_last_rc=0;
       return Send(r,res,"MODIFY SL "+reason,false);
      }
 

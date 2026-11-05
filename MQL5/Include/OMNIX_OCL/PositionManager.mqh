@@ -29,6 +29,7 @@ private:
    double            m_stop_buffer;
    int               m_momentum_window_ms;
    double            m_momentum_min;
+   double            m_latency_pad_per_s; // extra SL gap ($) per second of measured order latency
 
 public:
    ulong             ticket;              // current position ticket (0 = flat)
@@ -40,8 +41,9 @@ public:
 
    void              Init(const SOCLExitConfig &cfg,CBrokerProfile *p,CTradeLogger *l,CExecutionEngine *e,CMarketData *m,
                           const long magic,const int sl_min_modify_ms,const double stop_buffer,
-                          const int momentum_window_ms,const double momentum_min)
+                          const int momentum_window_ms,const double momentum_min,const double latency_pad_per_s=0.0)
      {
+      m_latency_pad_per_s=latency_pad_per_s;
       c=cfg; bp=p; lg=l; ex=e; md=m; m_magic=magic; m_sl_min_modify_ms=sl_min_modify_ms; m_stop_buffer=stop_buffer;
       m_momentum_window_ms=momentum_window_ms; m_momentum_min=momentum_min;
      }
@@ -103,6 +105,12 @@ public:
       double bid=md.tick.bid, ask=md.tick.ask, tick=bp.tick_size;
       double mind=bp.MinStopDist(m_stop_buffer);
       double px=(dir>0)?bid:ask;
+      //--- latency guard: on a slow link price keeps moving while a modify is in flight, so keep the
+      //    new stop further from price and space modifies by at least two round trips
+      double lat_ms=ex.LatencyMs();
+      double lat_pad=(m_latency_pad_per_s>0 && lat_ms>0)?OCL_RoundToTick(m_latency_pad_per_s*lat_ms/1000.0,tick):0.0;
+      double mind_mod=mind+lat_pad;
+      ulong  min_gap_ms=(ulong)MathMax((double)m_sl_min_modify_ms,2.0*lat_ms);
       double move=(dir>0)?(bid-entry):(entry-ask);
 
       //--- 1. never run without a stop
@@ -140,7 +148,7 @@ public:
       string why="";
       if(c.use_breakeven)
         {
-         double be=OCL_BreakEvenCandidate(dir,entry,bid,ask,sl,c.be_trigger,c.be_offset,bp.CostAsPrice(),mind,tick);
+         double be=OCL_BreakEvenCandidate(dir,entry,bid,ask,sl,c.be_trigger,c.be_offset,bp.CostAsPrice(),mind_mod,tick);
          if(be>0){ best=be; why="break-even"; }
         }
       if(c.use_trailing || c.adaptive)
@@ -148,7 +156,7 @@ public:
          double trail=c.trail_distance;
          if(c.adaptive)
             trail=MathMax(c.adaptive_min_trail,c.adaptive_trail_k*md.RangeMs(m_momentum_window_ms));
-         double tr=OCL_TrailCandidate(dir,entry,bid,ask,sl,c.trail_activation,trail,c.trail_step,mind,tick);
+         double tr=OCL_TrailCandidate(dir,entry,bid,ask,sl,c.trail_activation,trail,c.trail_step,mind_mod,tick);
          if(tr>0 && (best==0 || (dir>0 && tr>best) || (dir<0 && tr<best))){ best=tr; why=StringFormat("trail %.2f",trail); }
         }
       if(best>0)
@@ -157,9 +165,20 @@ public:
          double fz=bp.FreezeDist();
          if(fz>0 && MathAbs(px-sl)<=fz) return;
          ulong now=GetTickCount64();
-         if(now-m_last_sl_mod_ms<(ulong)m_sl_min_modify_ms) return;
+         if(now-m_last_sl_mod_ms<min_gap_ms) return;
          m_last_sl_mod_ms=now;
-         ex.ModifySL(ticket,best,StringFormat("%s %.2f->%.2f move %.2f",why,sl,best,move));
+         if(ex.ModifySL(ticket,best,StringFormat("%s %.2f->%.2f move %.2f lat %.0fms",why,sl,best,move,lat_ms))) return;
+         uint rc=ex.LastRetcode();
+         if(rc==TRADE_RETCODE_POSITION_CLOSED) return;     // already stopped out
+         //--- price ran through the stop we wanted while the request was in flight (typically 10016):
+         //    the old, worse stop is still live, so take the price that the new stop was meant to protect
+         MqlTick t;
+         if(!SymbolInfoTick(bp.symbol,t)) return;
+         double now_px=(dir>0)?t.bid:t.ask;
+         bool crossed=(dir>0)?(now_px<=best+1e-9):(now_px>=best-1e-9);
+         if(crossed && (rc==TRADE_RETCODE_INVALID_STOPS || rc==TRADE_RETCODE_ERROR || rc==TRADE_RETCODE_TIMEOUT
+                        || rc==TRADE_RETCODE_FROZEN || rc==TRADE_RETCODE_PRICE_CHANGED))
+            ex.ClosePosition(ticket,StringFormat("stop %.2f passed during modify (rc %u), close at market %.2f",best,rc,now_px));
         }
      }
   };

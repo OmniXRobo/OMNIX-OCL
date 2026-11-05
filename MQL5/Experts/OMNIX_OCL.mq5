@@ -87,7 +87,8 @@ input int      InpMaxHoldS            = 180;           // Max holding time (s)
 input ENUM_OCL_TIME_EXIT    InpTimeExitRule  = TIMEEXIT_IF_NOT_PROFITABLE; // Time-exit rule
 input double   InpAdaptiveTrailK      = 0.5;           // Adaptive: trail = k * range(momentum window)
 input double   InpAdaptiveMinTrail    = 0.10;          // Adaptive: minimum trail ($)
-input int      InpSLMinModifyMs       = 500;           // Min ms between SL modifies
+input int      InpSLMinModifyMs       = 500;           // Min ms between SL modifies (raised to 2x measured latency)
+input double   InpLatencyPadPerSec    = 0.30;          // Extra SL gap ($) per second of order latency (0 = off)
 
 input group "=== Position sizing ==="
 input ENUM_OCL_LOT_MODE     InpLotMode       = LOT_FIXED;    // Fixed / risk-based / adaptive
@@ -296,7 +297,7 @@ int OnInit()
 
    SOCLExitConfig ec; ResolveExit(ec);
    g_pos.Init(ec,GetPointer(g_bp),GetPointer(g_log),GetPointer(g_ex),GetPointer(g_md),InpMagic,InpSLMinModifyMs,
-              InpStopBuffer,InpMomentumWindowMs,InpMomentumMin);
+              InpStopBuffer,InpMomentumWindowMs,InpMomentumMin,InpLatencyPadPerSec);
    g_pos.SetInitialStop(InpSLFixed);
 
    //--- restart reconciliation: adopt existing positions/orders with our magic
