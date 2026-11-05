@@ -1,0 +1,57 @@
+; OMNIX OCL preset - Vantage (DEMO) - HexaFX-style structure, for a Vantage demo test.
+; Matches the structure measured in HexaFX's Vantage history: Buy/Sell Stop at Ask+1.00/Bid-1.00, static,
+; 20 s pending life, 21 s pause after each close, SL 1.00, break-even at +0.25 -> entry+0.01+costs, trail 0.50/0.30.
+; In the tick simulator on Vantage's feed (exact fills, $6/lot) this reproduced HexaFX's real results
+; (~+0.09/trade vs +0.08 real). Not yet run live. VERIFY commission on your Vantage account (raw: ~$6/lot RT).
+InpMagic=20261104
+InpSymbolOverride=
+InpStrategyTag=vantage-hexastyle
+InpDistMode=0
+InpOffsetFixed=1.00
+InpOffsetMin=0.30
+InpOffsetMax=3.0
+InpSLFixed=1.00
+InpArmSides=0
+InpPendingMode=0
+InpFollowDir=0
+InpFollowStep=0.10
+InpFollowMinMs=1000
+InpFollowMaxPerMin=30
+InpPendingLifetimeS=20
+InpOcoMode=0
+InpStopBuffer=0.02
+InpRearmMode=1
+InpRearmCooldownS=21
+InpRearmSpreadK=1.5
+InpExitProfile=0
+InpTrailActivation=0.50
+InpTrailDistance=0.30
+InpTrailStep=0.05
+InpUseTrailing=true
+InpUseBreakEven=true
+InpBETrigger=0.25
+InpBEOffset=0.01
+InpUseMicroProfit=false
+InpUseTimeExit=false
+InpLotMode=0
+InpFixedLots=0.01
+InpMaxRiskPct=1.0
+InpCommissionRTPerLot=6.00
+InpSimCommissionRTPerLot=0.0
+InpMaxDailyLossPct=3.0
+InpMaxDailyDDPct=4.0
+InpMaxWeeklyDDPct=8.0
+InpMaxSpread=0.40
+InpMaxSpreadVsAvg=2.5
+InpMaxSlippage=0.30
+InpMaxPositions=1
+InpMaxPending=2
+InpMaxTradesPerHour=0
+InpMaxConsecLosses=0
+InpConsecLossPauseMin=30
+InpSessionDubai=00:00-00:00
+InpFridayCutoffDubai=23:30
+InpServerUTCOffsetH=2
+InpServerDST=1
+InpNewsAction=2
+InpLogCommon=true
