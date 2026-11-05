@@ -2,8 +2,8 @@
 ; Enum values are integers (see documentation/M2_Strategy_Specification.md, section 7).
 InpMagic=20261104
 InpSymbolOverride=
-; Exness Standard accounts usually name gold XAUUSDm; auto-discovery handles it.
-InpStrategyTag=exness-baseline
+; Exness demo 474869353 (Exness-MT5Trial15) names gold XAUUSD; Standard accounts may use XAUUSDm. Auto-discovery handles both.
+InpStrategyTag=exness-latency
 InpDistMode=0
 InpOffsetFixed=0.95
 InpOffsetMin=0.30
@@ -21,15 +21,24 @@ InpStopBuffer=0.02
 InpRearmMode=1
 InpRearmCooldownS=0
 InpRearmSpreadK=1.5
-InpExitProfile=2
-InpTrailActivation=0.30
-InpTrailDistance=0.15
+; Exit: wider trail plus early break-even. From this VPS each order to Exness takes ~350 ms,
+; so a 0.15 trail was overtaken by price before the modify landed (25 failed SL modifies in 30 min).
+; Not validated on Exness data yet.
+InpExitProfile=0
+InpUseTrailing=true
+InpTrailActivation=0.50
+InpTrailDistance=0.30
 InpTrailStep=0.05
+InpUseBreakEven=true
+InpBETrigger=0.25
+InpBEOffset=0.01
+InpSLMinModifyMs=700
+InpLatencyPadPerSec=0.30
 InpLotMode=0
 InpFixedLots=0.01
 InpMaxRiskPct=1.0
-; VERIFY: Exness commission depends on account type (Standard: none, wider spread; Raw/Zero: commission). Set yours.
-InpCommissionRTPerLot=7.00
+; Exness demo 474869353 charges no commission (spread ~0.17). Raw/Zero accounts do charge: set yours.
+InpCommissionRTPerLot=0.00
 InpMaxDailyLossPct=3.0
 InpMaxDailyDDPct=4.0
 InpMaxWeeklyDDPct=8.0
@@ -43,7 +52,7 @@ InpMaxConsecLosses=0
 InpConsecLossPauseMin=30
 InpSessionDubai=00:00-00:00
 InpFridayCutoffDubai=23:30
-; VERIFY: Exness server time is commonly UTC+0 with no DST. Confirm on your terminal.
+; Exness server time is UTC+0 with no DST (checked on the demo terminal).
 InpServerUTCOffsetH=0
 InpServerDST=0
 InpNewsAction=2
