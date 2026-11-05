@@ -164,7 +164,7 @@ public:
          // freeze level: cannot modify when the current SL is within the freeze distance of price
          double fz=bp.FreezeDist();
          if(fz>0 && MathAbs(px-sl)<=fz) return;
-         ulong now=GetTickCount64();
+         ulong now=OCL_NowMs();
          if(now-m_last_sl_mod_ms<min_gap_ms) return;
          m_last_sl_mod_ms=now;
          if(ex.ModifySL(ticket,best,StringFormat("%s %.2f->%.2f move %.2f lat %.0fms",why,sl,best,move,lat_ms))) return;

@@ -15,6 +15,20 @@
 // Changing this requires an owner-approved code change, review and rebuild.
 #define OCL_LIVE_TRADING_ALLOWED false
 
+//--- Millisecond clock for throttles and timers. Live: wall clock. Strategy Tester: simulated
+//    tick time, because a tester day passes in seconds of wall time and wall-clock throttles
+//    would block almost every SL / pending modify there.
+ulong OCL_NowMs(void)
+  {
+   if(MQLInfoInteger(MQL_TESTER))
+     {
+      MqlTick t;
+      if(SymbolInfoTick(_Symbol,t) && t.time_msc>0) return (ulong)t.time_msc;
+      return (ulong)TimeCurrent()*1000;
+     }
+   return GetTickCount64();
+  }
+
 enum ENUM_OCL_LOT_MODE      { LOT_FIXED=0, LOT_RISK=1, LOT_ADAPTIVE=2 };
 enum ENUM_OCL_DIST_MODE     { DIST_FIXED=0, DIST_SPREAD_SCALED=1, DIST_ATR=2, DIST_TICK_RANGE=3 };
 enum ENUM_OCL_PENDING_MODE  { PEND_STATIC=0, PEND_FOLLOW_MODIFY=1, PEND_FOLLOW_REPLACE=2 };
