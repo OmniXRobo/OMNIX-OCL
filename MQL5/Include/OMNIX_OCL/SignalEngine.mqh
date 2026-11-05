@@ -30,6 +30,9 @@ struct SOCLSignalConfig
    double            rsi_low,rsi_high;   // skip arming when RSI outside [low,high]
    bool              use_adx_filter;
    double            adx_min;
+   bool              use_spike_filter;   // skip / withdraw the bracket while price is spiking
+   int               spike_window_ms;
+   double            spike_max;          // $ |mid change| over the window
    ENUM_OCL_REARM_MODE rearm_mode;
    int               rearm_cooldown_s;   // minimum seconds after a close (all modes)
    double            rearm_spread_k;     // REARM_SPREAD: spread <= k * average
@@ -142,6 +145,11 @@ public:
         {
          double x=md.AdxM5();
          if(x!=EMPTY_VALUE && x<c.adx_min){ s.arm_buy=s.arm_sell=false; s.reason=StringFormat("ADX %.1f < %.1f",x,c.adx_min); return; }
+        }
+      if(c.use_spike_filter && c.spike_max>0)
+        {
+         double sp=MathAbs(md.ChangeMs(c.spike_window_ms));
+         if(sp>c.spike_max){ s.arm_buy=s.arm_sell=false; s.reason=StringFormat("spike %.2f > %.2f in %dms",sp,c.spike_max,c.spike_window_ms); return; }
         }
       if(c.arm_sides==ARM_WITH_MOMENTUM)
         {
