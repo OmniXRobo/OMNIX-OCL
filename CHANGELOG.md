@@ -7,6 +7,7 @@
 - Fix: also skip a pending ticket that already opened a position (position id == order ticket), which MT5 still lists as PLACED for ~40 ms.
 - Fix (slow links, e.g. Exness at ~350 ms): stop modifies keep an extra gap from price of InpLatencyPadPerSec x latency and are spaced at least two round trips apart. If price passes the wanted stop while the modify is in flight, the position is closed at market instead of waiting for the old, worse stop.
 - Exness.set: commission 0 and symbol notes from the 474869353 demo, server time UTC confirmed, wider trail (0.50/0.30) plus break-even 0.25. Not validated on Exness data yet.
+- Fix: throttles and timers use simulated tick time in the Strategy Tester (OCL_NowMs). Wall-clock throttles blocked nearly every trailing-stop modify there, so tester results (7.5% win rate) did not match live behaviour. Live behaviour unchanged.
 
 ## 0.3.0 - 2026-11-04
 - Milestone 1 evidence analysis and reconstruction report; history export script and lifecycle reconstruction tool.

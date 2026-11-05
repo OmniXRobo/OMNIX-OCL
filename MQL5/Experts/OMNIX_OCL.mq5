@@ -329,7 +329,7 @@ void Process()
   {
    if(!g_md.Update()) return;
    // same quote as last time: only re-run once per second (time exits, session ends)
-   ulong now_ms=GetTickCount64();
+   ulong now_ms=OCL_NowMs();
    if(g_md.tick.time_msc==(ulong)g_last_tick_msc && now_ms-g_last_process_ms<1000) { Housekeeping(); return; }
    g_last_tick_msc=(long)g_md.tick.time_msc; g_last_process_ms=now_ms;
    if(g_log.LogTicks()) g_log.Event("TICK",OCL_RegimeName(g_md.Regime()));

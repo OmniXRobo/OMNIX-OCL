@@ -35,21 +35,21 @@ private:
    CExecutionEngine *ex;
    CMarketData      *md;
    long              m_magic;
-   long              m_inflight_until[2];   // 0 buy, 1 sell (GetTickCount64 ms)
+   long              m_inflight_until[2];   // 0 buy, 1 sell (OCL_NowMs ms)
    ulong             m_last_mod_ms[2];
-   ulong             m_mod_times[];         // GetTickCount64 of recent modifies
+   ulong             m_mod_times[];         // OCL_NowMs of recent modifies
 
-   bool              InFlight(const int side) const { return (long)GetTickCount64()<m_inflight_until[side]; }
-   void              SetInFlight(const int side,const bool on) { m_inflight_until[side]=on?(long)GetTickCount64()+3000:0; }
+   bool              InFlight(const int side) const { return (long)OCL_NowMs()<m_inflight_until[side]; }
+   void              SetInFlight(const int side,const bool on) { m_inflight_until[side]=on?(long)OCL_NowMs()+3000:0; }
 
    int               ModsLastMinute(void)
      {
-      ulong now=GetTickCount64(); int k=0;
+      ulong now=OCL_NowMs(); int k=0;
       for(int i=0;i<ArraySize(m_mod_times);i++) if(now-m_mod_times[i]<60000) m_mod_times[k++]=m_mod_times[i];
       ArrayResize(m_mod_times,k);
       return k;
      }
-   void              NoteMod(void) { int n=ArraySize(m_mod_times); ArrayResize(m_mod_times,n+1); m_mod_times[n]=GetTickCount64(); }
+   void              NoteMod(void) { int n=ArraySize(m_mod_times); ArrayResize(m_mod_times,n+1); m_mod_times[n]=OCL_NowMs(); }
 
 public:
    ulong             buy_ticket,sell_ticket;
@@ -155,7 +155,7 @@ public:
    void              ManageFlat(const SOCLSignal &s,const bool may_place,const double lots,const string why_place)
      {
       double bpz,bsl,spz,ssl; Desired(s,bpz,bsl,spz,ssl);
-      ulong nowms=GetTickCount64();
+      ulong nowms=OCL_NowMs();
 
       //--- lifetime expiry (own timer; broker expiry is a backstop)
       if(c.lifetime_s>0)
