@@ -348,6 +348,20 @@ GRIDS = {
         exit=[("trail", 0.30, 0.15), ("trail", 0.5, 0.3), ("trail", 0.8, 0.4), ("trail", 1.2, 0.6)],
         trend=[(0, 0.0)],
     ),
+    # finer search around the live prime-core pick (off 1.5 static 20 s, SL 0.3, BE 0.15, trail 0.30/0.15),
+    # aimed at bigger average wins: wider bracket, later / wider trail, TP alternative
+    "refine": dict(
+        mode=[0],
+        off=[1.25, 1.5, 2.0, 2.5],
+        sl=[0.2, 0.3, 0.4],
+        follow=[False],
+        lifetime_ms=[10000, 20000, 40000],
+        cooldown_ms=[0],
+        be=[(0.10, 0.01), (0.15, 0.01), (0.20, 0.02)],
+        exit=[("trail", 0.30, 0.15), ("trail", 0.40, 0.20), ("trail", 0.60, 0.25), ("trail", 0.80, 0.30),
+              ("trail", 1.00, 0.40), ("tp", 0.8), ("tp", 1.5)],
+        trend=[(0, 0.0)],
+    ),
     "default": dict(
         mode=[0, 1],
         off=[0.5, 0.95, 1.5, 2.0, 3.0],
