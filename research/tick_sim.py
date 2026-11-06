@@ -37,7 +37,7 @@ except ImportError:  # pure-python fallback (slow)
 @njit(cache=True)
 def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_ms, lifetime_ms,
              max_spread, comm, cooldown_ms, trend_ms, trend_min, max_hold_ms, be_trig, be_off, exact_fill,
-             adx, adx_min, spk, spike_max):
+             adx, adx_min, spk, spike_max, confirm_ms):
     """Return (open_ms, dir, pnl, mfe, close_ms) arrays per closed trade. mode 0=breakout stops, 1=fade limits.
     adx: per-tick ADX of the last closed M5 bar (filter off when adx_min <= 0).
     spk: per-tick |mid change| over the spike window (filter off when spike_max <= 0).
@@ -66,6 +66,9 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
     dn_mod = 0
     cool_until = 0
     j = 0
+    cf_dir = 0      # confirm-entry: side whose trigger was crossed, waiting confirm_ms
+    cf_t = 0
+    cf_px = 0.0
     for i in range(n):
         ti = t[i]
         b = bid[i]
@@ -147,6 +150,28 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
                 elif dn_on and a <= dn_px:
                     filled = 1
                     fpx = dn_px
+            if filled != 0 and confirm_ms > 0:
+                # confirmation entry: do not fill on the touch; enter at market only if price is still
+                # beyond the trigger confirm_ms later (filters spikes that snap straight back)
+                if cf_dir == 0:
+                    cf_dir = filled
+                    cf_t = ti
+                    cf_px = up_px if filled > 0 else dn_px
+                    filled = 0
+                elif ti - cf_t < confirm_ms:
+                    filled = 0
+            if cf_dir != 0 and confirm_ms > 0 and ti - cf_t >= confirm_ms:
+                still = (cf_dir > 0 and a >= cf_px) if mode == 0 else False
+                still = still or (mode == 0 and cf_dir < 0 and b <= cf_px)
+                if still:
+                    filled = cf_dir
+                    fpx = a if cf_dir > 0 else b
+                else:
+                    filled = 0
+                    placed = False
+                cf_dir = 0
+                if not still:
+                    continue
             if filled != 0:
                 pos = filled
                 entry = fpx
@@ -156,7 +181,7 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
                 tpp = entry + tp * pos
                 placed = False
                 continue
-            if lifetime_ms > 0 and ti - placed_t >= lifetime_ms:
+            if lifetime_ms > 0 and ti - placed_t >= lifetime_ms and cf_dir == 0:
                 placed = False
             else:
                 # tighten-only follow toward the market
@@ -189,6 +214,7 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
                 up_px = b + off
                 dn_px = a - off
             if up_on or dn_on:
+                cf_dir = 0
                 placed = True
                 placed_t = ti
                 up_mod = ti
@@ -198,7 +224,8 @@ def simulate(t, bid, ask, mode, off, sl, tp, act, dist, follow_step, follow_min_
 
 DEFAULTS = dict(mode=0, off=0.95, sl=1.0, tp=0.0, act=0.30, dist=0.15, follow_step=0.10, follow_min_ms=1000,
                 lifetime_ms=300000, max_spread=0.40, comm=0.03, cooldown_ms=0, trend_ms=0, trend_min=0.0,
-                max_hold_ms=0, be_trig=0.0, be_off=0.0, exact_fill=0, adx_min=0.0, spike_ms=0, spike_max=0.0)
+                max_hold_ms=0, be_trig=0.0, be_off=0.0, exact_fill=0, adx_min=0.0, spike_ms=0, spike_max=0.0,
+                confirm_ms=0)
 
 
 def adx_per_tick(t, b, a, bar_ms=300000, period=14):
@@ -303,7 +330,7 @@ def run(t, b, a, **kw):
                     _feature("adx", t, b, a, 0) if f("adx_min") > 0 else np.zeros(1),
                     f("adx_min"),
                     _feature("spike", t, b, a, i("spike_ms")) if f("spike_max") > 0 else np.zeros(1),
-                    f("spike_max"))
+                    f("spike_max"), i("confirm_ms"))
 
 
 GRIDS = {
@@ -362,6 +389,19 @@ GRIDS = {
               ("trail", 1.00, 0.40), ("tp", 0.8), ("tp", 1.5)],
         trend=[(0, 0.0)],
     ),
+    # v2-wide plus a confirmation entry (fill only if price is still beyond the trigger confirm_ms later)
+    "confirm": dict(
+        mode=[0],
+        off=[1.5, 2.0, 2.5],
+        sl=[0.2, 0.3],
+        follow=[False],
+        lifetime_ms=[10000, 20000],
+        cooldown_ms=[0],
+        be=[(0.10, 0.01)],
+        exit=[("trail", 0.30, 0.15), ("trail", 0.40, 0.20)],
+        trend=[(0, 0.0)],
+        confirm=[0, 200, 500, 1000],
+    ),
     "default": dict(
         mode=[0, 1],
         off=[0.5, 0.95, 1.5, 2.0, 3.0],
@@ -374,13 +414,13 @@ GRIDS = {
 
 
 def expand(grid):
-    for mode, off, sl, ex, tr, fol, life, cool, be, adx, spk in itertools.product(
+    for mode, off, sl, ex, tr, fol, life, cool, be, adx, spk, cfm in itertools.product(
             grid["mode"], grid["off"], grid["sl"], grid["exit"], grid["trend"], grid.get("follow", [True]),
             grid.get("lifetime_ms", [300000]), grid.get("cooldown_ms", [0]), grid.get("be", [(0.0, 0.0)]),
-            grid.get("adx", [0.0]), grid.get("spike", [(0, 0.0)])):
+            grid.get("adx", [0.0]), grid.get("spike", [(0, 0.0)]), grid.get("confirm", [0])):
         kw = dict(mode=mode, off=off, sl=sl, trend_ms=tr[0], trend_min=tr[1],
                   follow_step=0.10 if fol else 1e9, lifetime_ms=life, cooldown_ms=cool, be_trig=be[0], be_off=be[1],
-                  adx_min=adx, spike_ms=spk[0], spike_max=spk[1])
+                  adx_min=adx, spike_ms=spk[0], spike_max=spk[1], confirm_ms=cfm)
         if ex[0] == "trail":
             kw.update(tp=0.0, act=ex[1], dist=ex[2])
         else:
@@ -419,7 +459,7 @@ def main():
         oos = stats(op[ot >= split_ms])
         rows.append((kw, ins, oos))
     keys = ["mode", "off", "sl", "tp", "act", "dist", "trend_ms", "trend_min", "follow_step", "lifetime_ms",
-            "cooldown_ms", "be_trig", "be_off", "adx_min", "spike_ms", "spike_max"]
+            "cooldown_ms", "be_trig", "be_off", "adx_min", "spike_ms", "spike_max", "confirm_ms"]
     with open(a.out, "w") as f:
         f.write(",".join(keys + [f"is_{s}" for s in ("trades", "net", "pf", "win", "avg", "dd")]
                          + [f"oos_{s}" for s in ("trades", "net", "pf", "win", "avg", "dd")]) + "\n")

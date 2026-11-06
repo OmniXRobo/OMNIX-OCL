@@ -67,3 +67,16 @@ def test_adx_high_in_trend_low_in_range():
         adx = ts.adx_per_tick(t, b, a)
         assert len(adx) == len(t)
         assert (adx[-1] > 40) == want_high
+
+
+def test_confirm_entry_skips_snapback_and_takes_follow_through():
+    # spike to 101.2 then straight back: filled without confirmation, skipped with 500 ms confirmation
+    t, b, a = ticks([100, 100, 101.2, 100.0, 99.5, 99.5], step_ms=400)
+    _, od, _, _, _ = ts.run(t, b, a, off=0.95, sl=1.0, act=5, dist=0.15, comm=0.0)
+    assert list(od) == [1]
+    _, od2, _, _, _ = ts.run(t, b, a, off=0.95, sl=1.0, act=5, dist=0.15, comm=0.0, confirm_ms=500)
+    assert len(od2) == 0
+    # follow-through: still above the trigger 800 ms later -> enters at market
+    t, b, a = ticks([100, 100, 101.2, 101.4, 101.6, 99.0, 99.0], step_ms=400)
+    _, od3, op3, _, _ = ts.run(t, b, a, off=0.95, sl=1.0, act=5, dist=0.15, comm=0.0, confirm_ms=500)
+    assert list(od3) == [1]
